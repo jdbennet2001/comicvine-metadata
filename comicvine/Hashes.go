@@ -88,6 +88,6 @@ func saveHashes(rootDir string, hashData map[int]string) error {
 }
 
 func cacheLocation(rootDir string) string {
-	cache := filepath.Join(rootDir, "covers", "hashes.json")
+	cache := filepath.Join(rootDir, "hashes.json")
 	return cache
 }
