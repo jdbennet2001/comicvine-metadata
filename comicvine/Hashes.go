@@ -1,7 +1,6 @@
-package data
+package comicvine
 
 import (
-	"comicvine-metadata/comicvine"
 	"encoding/json"
 	"fmt"
 	"github.com/corona10/goimagehash"
@@ -12,7 +11,7 @@ import (
 	"strconv"
 )
 
-func HashData(rootDir string, issues []comicvine.Issue) map[int]string {
+func UpdateHashData(rootDir string, issues []Issue) map[int]string {
 
 	fmt.Println("Checking covers and hash data.")
 
@@ -35,25 +34,12 @@ func HashData(rootDir string, issues []comicvine.Issue) map[int]string {
 		}
 
 		hashes[issue.ID] = value
-		saveHashes(rootDir, hashes)
 
 	}
+
+	saveHashes(rootDir, hashes)
 
 	return hashes
-
-}
-
-// Return the location for a given issue
-func coverLocation(root string, issue comicvine.Issue) string {
-
-	var month = "0000-00"
-
-	if len(issue.CoverDate) > 0 {
-		month = issue.CoverDate[0:7]
-	}
-
-	cover := filepath.Join(root, "covers", month, strconv.Itoa(issue.ID)+".jpg")
-	return cover
 
 }
 

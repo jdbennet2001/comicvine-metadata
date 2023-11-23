@@ -27,15 +27,19 @@ type IssueResponse struct {
 	Offset               int    `json:"offset"`
 }
 
-func UpdateIssueData(rootDir string, apiKey string) {
+func UpdateIssueData(rootDir string, apiKey string) []Issue {
 
 	months := months(cutoffYear)
 
+	// Update any missing notes
 	for _, month := range months {
 		updateIssues(rootDir, month, apiKey)
 	}
 
+	// Update this month -> next year data
 	updateExtra(rootDir, apiKey)
+
+	return issueRecords(rootDir)
 
 }
 
@@ -61,6 +65,7 @@ func updateIssues(root string, month string, apiKey string) error {
 
 	location := filepath.Join(root, "issues", month+".json")
 	if _, err := os.Stat(location); err == nil {
+		fmt.Println(".. skipping ", location)
 		return nil
 	}
 
@@ -117,5 +122,42 @@ func issues(dateRange string, apiKey string) []Issue {
 
 	}
 
+	return results
+}
+
+// Returns all issues
+func issueRecords(rootDir string) []Issue {
+
+	var issues []Issue
+
+	directory := filepath.Join(rootDir, "issues")
+	files, _ := ioutil.ReadDir(directory) //read the files from the directory
+	for _, file := range files {
+		fileLocation := filepath.Join(directory, file.Name())
+		data := loadIssueFile(fileLocation)
+		issues = append(issues, data...)
+	}
+
+	return issues
+
+}
+
+func loadIssueFile(filename string) []Issue {
+
+	fmt.Println(".. loading ", filename)
+
+	// Open our jsonFile
+	jsonFile, err := os.Open(filename)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	// defer the closing of our jsonFile so that we can parse it later on
+	defer jsonFile.Close()
+
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+
+	var results []Issue
+	json.Unmarshal(byteValue, &results)
 	return results
 }

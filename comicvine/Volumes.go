@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"math"
 	"net/http"
 	"os"
@@ -34,30 +33,23 @@ type SingleVolumeResponse struct {
 	Version              string `json:"version"`
 }
 
-func UpdateVolumeData(rootDir string, apiKey string) {
+func UpdateVolumeData(rootDir string, issues []Issue, apiKey string) map[int]Volume {
 
-	months := months(cutoffYear)
+	volumes := loadVolumes(rootDir)
 
-	for _, month := range months {
-		updateVolumes(rootDir, month, apiKey)
+	for _, issue := range issues {
+		_, ok := volumes[issue.Volume.ID]
+		if ok {
+			continue
+		}
+
+		volume := getVolumeData(issue, apiKey)
+		volumes[volume.Id] = volume
 	}
 
-}
+	saveVolumes(rootDir, volumes)
+	return volumes
 
-func updateVolumes(root string, month string, apiKey string) error {
-
-	location := filepath.Join(root, "volumes", month+".json")
-	if _, err := os.Stat(location); err == nil {
-		return nil
-	}
-
-	fmt.Println(".. downloading volume data for ", month)
-	dateRange := fmt.Sprintf("%s-01|%s-31", month, month)
-	data := volumes(dateRange, apiKey)
-	file, _ := json.MarshalIndent(data, "", "\t")
-	_ = ioutil.WriteFile(location, file, 0644)
-
-	return nil
 }
 
 // Returns all volumes for a given month
@@ -107,56 +99,10 @@ func volumes(dateRange string, apiKey string) []Volume {
 	return results
 }
 
-// ---------------------------------------------------------------------------------------------------- //
-
-func UpdateMissingVolumes(rootDir string, issues []Issue, volumes []Volume, apiKey string) []Volume {
-
-	vmap := volumeMap(volumes)
-
-	var entries []Volume
-
-	baseName := "extra-" + time.Now().Format("2006-01-02 15:04:05") + ".json"
-	fullName := filepath.Join(rootDir, "volumes", baseName)
-
-	for _, issue := range issues {
-
-		volumeID := issue.Volume.ID
-		if _, ok := vmap[volumeID]; ok {
-			continue
-		}
-
-		volume := getVolumeData(issue.Volume.APIDetailURL, apiKey)
-		vmap[volumeID] = volume
-		entries = append(entries, volume)
-
-		// Dump Hash data to disk
-		jsonData, _ := json.MarshalIndent(entries, "", "    ")
-		err := ioutil.WriteFile(fullName, jsonData, 0644)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-	}
-
-	return entries
-
-}
-
-// Build a lookup table of volumes id / volume data for better performance
-func volumeMap(volumes []Volume) map[int]Volume {
-
-	var vmap map[int]Volume = make(map[int]Volume)
-
-	for _, volume := range volumes {
-		vmap[volume.Id] = volume
-	}
-
-	return vmap
-}
-
 // Return information for a given volume
-func getVolumeData(url string, apiKey string) Volume {
+func getVolumeData(issue Issue, apiKey string) Volume {
 
+	url := issue.Volume.APIDetailURL
 	authURL := fmt.Sprintf("%s?api_key=%s&format=json", url, apiKey)
 
 	req, _ := http.NewRequest("GET", authURL, nil)
@@ -182,4 +128,28 @@ func getVolumeData(url string, apiKey string) Volume {
 	time.Sleep(RATE_LIMIT * time.Second)
 
 	return volume
+}
+
+func loadVolumes(rootDir string) map[int]Volume {
+
+	location := filepath.Join(rootDir, "volumes.json")
+
+	if _, e := os.Stat(location); os.IsNotExist(e) {
+		return make(map[int]Volume)
+	}
+
+	var data map[int]Volume
+	file, _ := ioutil.ReadFile(location)
+	json.Unmarshal(file, &data)
+
+	return data
+}
+
+func saveVolumes(rootDir string, volumes map[int]Volume) error {
+
+	location := filepath.Join(rootDir, "volumes.json")
+
+	file, _ := json.MarshalIndent(volumes, "", "\t")
+	err := ioutil.WriteFile(location, file, 0644)
+	return err
 }

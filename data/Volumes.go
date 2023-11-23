@@ -10,23 +10,27 @@ import (
 	"path/filepath"
 )
 
-func VolumeData(rootDir string) []comicvine.Volume {
+func VolumeData(rootDir string) map[int]comicvine.Volume {
 
 	directory := filepath.Join(rootDir, "volumes")
 
-	var results []comicvine.Volume
+	volumes := make(map[int]comicvine.Volume)
 
 	// Get a list of all covers
 	volumeFiles := fsutils.Walk(directory, ".json")
 	print(len(volumeFiles), " volume data sets")
 
 	for _, volumeFile := range volumeFiles {
-		volumes := loadVolumes(volumeFile)
 		fmt.Println("Loading volume data from: ", filepath.Base(volumeFile), ".. ", len(volumes), " issues")
-		results = append(results, volumes...)
+
+		entries := loadVolumes(volumeFile)
+		for _, v := range entries {
+			volumes[v.Id] = v
+		}
+
 	}
 
-	return results
+	return volumes
 }
 
 func loadVolumes(filename string) []comicvine.Volume {

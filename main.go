@@ -3,11 +3,12 @@ package main
 import (
 	"comicvine-metadata/comicvine"
 	"comicvine-metadata/data"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
-	"strconv"
 )
 
 func main() {
@@ -33,19 +34,27 @@ func main() {
 	fmt.Println("Directory:", *dir)
 	fmt.Println("API Key:", *apiKey)
 
-	// Download new issues
-	//comicvine.UpdateIssueData(*dir, *apiKey)
-	issues := data.IssueData(*dir)
+	//// Download new issues
+	issues := comicvine.UpdateIssueData(*dir, *apiKey)
 
-	//Download new volumes
-	comicvine.UpdateVolumeData(*dir, *apiKey)
-	volumes := data.VolumeData(*dir)
-	comicvine.UpdateMissingVolumes(*dir, issues, volumes, *apiKey)
+	// Use issue data to download volume / cover / hashes ...
+	comicvine.UpdateCovers(*dir, issues)
+	volumes := comicvine.UpdateVolumeData(*dir, issues, *apiKey)
+	hashes := comicvine.UpdateHashData(*dir, issues)
+	//
+	//// Summarize the data
+	summary := data.SummaryRecords(issues, volumes, hashes)
 
-	//comicvine.UpdateCovers(*dir, issues)
+	// And store
+	file, _ := json.MarshalIndent(summary, "", "\t")
+	err := ioutil.WriteFile("index.json", file, 0644)
+	if err == nil {
+		msg := fmt.Sprintf("Done! %d records available.", len(summary))
+		fmt.Println(msg)
+	} else {
+		fmt.Println("Error serializing data: ", err)
+	}
 
-	hashes := data.HashData(*dir, issues)
-
-	fmt.Println("Done!, " + strconv.Itoa(len(hashes)) + " hashes")
+	fmt.Println(len(issues), ".. done")
 
 }

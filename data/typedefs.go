@@ -14,4 +14,5 @@ type SummaryRecord struct {
 	Hash        string `json:"hash"`
 	VolumeID    string `json:"volume_id"`
 	VolumeStart string `json:"volume_start"`
+	Description string `json:"description"`
 }

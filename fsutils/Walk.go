@@ -7,8 +7,8 @@ import (
 	"strings"
 )
 
-//Walk a directory tree returning a of files with a given extension
-func Walk(rootpath string, filter string)[]string {
+// Walk a directory tree returning a of files with a given extension
+func Walk(rootpath string, filter string) []string {
 
 	var results []string
 
@@ -16,16 +16,16 @@ func Walk(rootpath string, filter string)[]string {
 
 		// Apple cache data is never useful
 		basename := filepath.Base(path)
-		if strings.HasPrefix(basename, "."){
+		if strings.HasPrefix(basename, ".") {
 			return nil
 		}
 
-		if filepath.Ext(path) == filter{
-			//println("Scanning ", len(results), " - ", path)
+		if filepath.Ext(path) == filter {
+			println(".. ", len(results), " - ", path)
 			results = append(results, path)
 		}
 
-		return nil	// No error...
+		return nil // No error...
 	})
 	if err != nil {
 		fmt.Printf("Walk error [%v]\n", err)

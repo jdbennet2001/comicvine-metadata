@@ -4,53 +4,50 @@ import (
 	"comicvine-metadata/comicvine"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"strconv"
 	"strings"
 )
 
 // Generate a JSON index of all issues available for processing
-func getSummaryRecords(root string, issueData []comicvine.Issue, volumes []comicvine.Volume) []SummaryRecord {
+func SummaryRecords(issueData []comicvine.Issue, volumes map[int]comicvine.Volume, hashes map[int]string) []SummaryRecord {
 
 	var summary []SummaryRecord
 
 	// Remove publishers known to be bad
-	//skippedPublishers := map[string]bool{"Panini Comics": true,
-	//	"ECC Ediciones":      true,
-	//	"Norma Editorial":    true,
-	//	"No Comprendo Press": true,
-	//	"Timely":             true,
-	//	"Planeta DeAgostini": true,
-	//	"Toutain Editor":     true,
-	//	"Dupuis":             true,
+	skippedPublishers := map[string]bool{"Panini Comics": true,
+		"ECC Ediciones":      true,
+		"Norma Editorial":    true,
+		"No Comprendo Press": true,
+		"Timely":             true,
+		"Planeta DeAgostini": true,
+		"Toutain Editor":     true,
+		"Dupuis":             true,
+	}
 
-	for ctr, issue := range issueData {
+	for _, issue := range issueData {
 
-		volume, err := getVolume(issue.Volume.ID, volumes)
-
-		if err != nil {
-			fmt.Println("Skipping ", issue.Name, " : ", issue.IssueNumber+", no volume.")
-			continue
-		}
-
-		if ctr%100 == 0 {
-			fmt.Println("..", ctr, " covers processed.")
-		}
+		volume := volumes[issue.Volume.ID]
 
 		var record = SummaryRecord{
 			ID:          issue.ID,
-			Name:        issue.Name,
+			Name:        normalize(issue.Name),
 			IssueNumber: issue.IssueNumber,
 			Image:       issue.Image.OriginalURL,
 			CoverDate:   issue.CoverDate,
 			IssueSource: issue.SiteDetailURL,
-			VolumeName:  issue.Volume.Name,
+			VolumeName:  normalize(issue.Volume.Name),
 			Publisher:   volume.Publisher.Name,
 			VolumeCount: volume.CountOfIssues,
-			//Hash:        ,
+			Hash:        hashes[issue.ID],
 			VolumeID:    strconv.Itoa(volume.Id),
 			VolumeStart: volume.StartYear,
+			Description: issue.Description,
+		}
+
+		// Drop the European publishers that push reprintss
+		if skippedPublishers[record.Publisher] {
+			continue
 		}
 
 		summary = append(summary, record)
